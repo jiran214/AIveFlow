@@ -1,15 +1,7 @@
-# AIveFlow
-coding...
-比crew更灵活，初步完成flow的手动设定构建，后面会支持自动化构建
-
-```shell
-git clone https://github.com/jiran214/AIveFlow.git
-cd aiveflow
-pip install requirements.txt 
-```
-
-模仿crew的快速开始
-```python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# !/usr/bin/env python
+# -*- coding: utf-8 -*-
 import os
 
 from langchain_community.tools.wikipedia.tool import WikipediaQueryRun
@@ -68,25 +60,10 @@ Expected Full blog post of at least 4 paragraphs""",
 )
 
 # Instantiate your crew with a sequential process
-crew_flow = ListFlow(steps=[task1, task2])
-result = crew_flow.run()
+crew_copy = ListFlow(steps=[task1, task2])
+
+# Get your crew to work!
+result = crew_copy.run()
 
 print("######################")
 print(result)
-
-
-# Next Step 1
-from aiveflow.role.task import RouteTask
-from aiveflow.role.repository import RoleRepository
-company = RoleRepository().load()
-flow = ListFlow(steps=[
-    RouteTask(description='xxx', roles=company), 
-    RouteTask(description='xxx', roles=company), 
-    RouteTask(description='xxx', roles=company), 
-    ...
-])
-
-# Next Step 2
-auto_flow = ListFlow.auto(goal="Full blog post of at least 4 paragraphs", roles=company)
-auto_flow.run()
-```
