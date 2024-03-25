@@ -3,6 +3,7 @@
 import operator
 from typing import List, TypedDict, Annotated, Sequence, Optional
 
+from langchain.chains.base import Chain
 from langgraph.graph import StateGraph, END
 from pydantic import Field
 

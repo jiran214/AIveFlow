@@ -13,6 +13,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, PrivateAttr, Field, model_validator
 
 from aiveflow import settings
+from aiveflow.components import RPMCallback
 from aiveflow.role.core import Role, ToolLike
 from aiveflow.role.groups import DEFAULT_ROLE
 
@@ -69,6 +70,9 @@ class Task(BaseModel):
             self.chain = agent_executor | itemgetter('output')
         else:
             self.chain = _prompt | self.chain | StrOutputParser()
+
+        if settings._rpm_controller:
+            self.chain = self.chain.with_config(config={'callbacks': [RPMCallback()]})
 
     @property
     def output(self):
