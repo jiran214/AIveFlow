@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import json
-from typing import Optional, Any, Union, Callable, Type, Dict, List
+from typing import Optional, Any, Callable, Type, Dict, List, TypeVar, Union, Sequence
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
@@ -9,16 +9,21 @@ from langchain_openai import ChatOpenAI
 from pydantic import model_validator, BaseModel, Field
 
 from aiveflow import settings
+from dotenv import load_dotenv
 
-ToolLike = Union[Dict[str, Any], Type[BaseModel], Callable, BaseTool, str]
+# https://python.langchain.com/docs/modules/agents/tools/custom_tools#subclass-basetool
+ToolLike = TypeVar('ToolLike', Callable[[str], str], str)
+
+
+load_dotenv(dotenv_path='../.env', verbose=True)
 
 
 class Role(BaseModel):
     name: str = Field(description='role name')
     system: str = Field(description='Role play setting')
+    tools: List['ToolLike'] = Field([])
     openai_model_name: Optional[str] = None
     chat_model: Optional[BaseChatModel] = None
-    tools: List[ToolLike] = []
 
     @classmethod
     def from_json(cls, filepath):
@@ -39,5 +44,7 @@ class Role(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+
 
 

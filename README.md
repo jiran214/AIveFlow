@@ -77,8 +77,7 @@ print(result)
 
 # Next Step 1
 from aiveflow.role.task import RouteTask
-from aiveflow.role.repository import RoleRepository
-company = RoleRepository().load()
+company =[writer, researcher]
 flow = ListFlow(steps=[
     RouteTask(description='xxx', roles=company), 
     RouteTask(description='xxx', roles=company), 

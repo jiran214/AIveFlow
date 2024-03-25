@@ -6,42 +6,63 @@ from typing import Optional, List, Sequence
 
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
+from langchain_core.tools import tool, BaseTool
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, PrivateAttr, Field, model_validator
 
 from aiveflow import settings
 from aiveflow.role.core import Role, ToolLike
+from aiveflow.role.groups import DEFAULT_ROLE
 
 
 class Task(BaseModel):
-    role: Role
+    role: Role = Field(default_factory=lambda: DEFAULT_ROLE)
     description: Optional[str] = None
     tools: List[ToolLike] = []
     chain: Optional[Runnable] = None
-    _output: str = PrivateAttr()
+    _output: str = PrivateAttr('')
 
-    def prepare_execute(self):
+    @model_validator(mode='after')
+    def __set_tools(self):
         # override if exists
         self.tools = self.tools or self.role.tools
+        # load module if tool is str type
+        _tools = []
+        for _tool in self.tools:
+            if isinstance(_tool, str):
+                _tool = importlib.import_module(_tool)
+            if isinstance(_tool, BaseTool):
+                pass
+            elif callable(_tool):
+                _tool = tool()(_tool)
+            else:
+                raise ValueError('tool is not type of langchain.BaseTool')
+            # if not isinstance(_tool, func):
+            #     _tool = tool(_tool)
+            _tools.append(_tool)
+        self.tools = _tools
+        return self
+
+    def prepare_execute(self):
+        assert self.chain or self.description, 'Both description and chain are empty!'
         # custom chain
         if self.chain:
             return
         # set prompt
         _prompt = ChatPromptTemplate.from_messages([
             ('system', f"{self.role.system}\nPlease use {settings.LANGUAGE}."),
-            ('human', '{input}')
+            ('human', '{context}Your task:\n' + self.description)
         ])
 
         # set llm
         self.chain = self.role.chat_model
         # construct chain
         if self.tools:
+            _prompt += MessagesPlaceholder("agent_scratchpad")
             # set agent, just support openai model
             assert isinstance(self.chain, ChatOpenAI)
-            # load module if tool is str type
-            self.tools = [importlib.import_module(_tool) if isinstance(_tool, str) else _tool for _tool in self.tools ]
             agent = create_openai_tools_agent(self.chain, self.tools, _prompt)
             # Create an agent executor by passing in the agent and tools
             agent_executor = AgentExecutor(agent=agent, tools=self.tools)
