@@ -19,7 +19,7 @@ def get_os_language():
 
 
 class RPMController(BaseModel):
-    max_rpm: int
+    max_rpm: int = Field(description="Maximum number of requests per minute for the crew execution to be respected.")
     _current_rpm: int = PrivateAttr(default=0)
     _timer: Optional[threading.Timer] = PrivateAttr(default=None)
     _lock: threading.Lock = PrivateAttr(default=None)
@@ -53,3 +53,7 @@ class RPMController(BaseModel):
             self._timer.cancel()
         self._timer = threading.Timer(60.0, self._reset_request_count)
         self._timer.start()
+
+
+class Stop(Exception):
+    pass

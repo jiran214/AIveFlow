@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import operator
-from typing import List, TypedDict, Annotated, Sequence, Optional
+from typing import List, TypedDict, Annotated, Sequence
 
-from langchain.chains.base import Chain
 from langgraph.graph import StateGraph, END
 from pydantic import Field
 
@@ -32,7 +31,7 @@ def get_context(state: ListFlowState, length):
     return ""
 
 
-class ListFlow(Flow):
+class LineFlow(Flow):
     steps: Sequence['Task']
     task_context_length: int = 1
     graph: StateGraph = Field(default_factory=lambda: StateGraph(ListFlowState))
@@ -46,9 +45,10 @@ class ListFlow(Flow):
         assert task.chain
 
         def execute(state):
-            _input = dict(
-                context=get_context(state, self.task_context_length)
-            )
+            # inject
+            if self._limit_controller and self._limit_controller.should_continue is False:
+                return
+            _input = dict(context=get_context(state, self.task_context_length))
             task._output = task.chain.invoke(_input)
             return {'contexts': [TaskState(role_name=task.role.name, task_output=task.output)]}
 
@@ -71,4 +71,3 @@ class ListFlow(Flow):
         last_context = final_state['contexts'][-1]
         last_output = last_context['task_output']
         return last_output
-

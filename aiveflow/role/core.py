@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 ToolLike = TypeVar('ToolLike', Callable[[str], str], str)
 
 
-load_dotenv(dotenv_path='../.env', verbose=True)
+load_dotenv(dotenv_path='../../.env', verbose=True)
 
 
 class Role(BaseModel):

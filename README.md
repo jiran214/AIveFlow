@@ -9,13 +9,14 @@ pip install requirements.txt
 ```
 
 模仿crew的快速开始
+
 ```python
 import os
 
 from langchain_community.tools.wikipedia.tool import WikipediaQueryRun
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
-from aiveflow.flow.list import ListFlow
+from aiveflow.flow.line import LineFlow
 from aiveflow.role.core import Role
 from aiveflow.role.task import Task
 
@@ -68,24 +69,24 @@ Expected Full blog post of at least 4 paragraphs""",
 )
 
 # Instantiate your crew with a sequential process
-crew_flow = ListFlow(steps=[task1, task2])
+crew_flow = LineFlow(steps=[task1, task2])
 result = crew_flow.run()
 
 print("######################")
 print(result)
 
-
 # Next Step 1
 from aiveflow.role.task import RouteTask
-company =[writer, researcher]
-flow = ListFlow(steps=[
-    RouteTask(description='xxx', roles=company), 
-    RouteTask(description='xxx', roles=company), 
-    RouteTask(description='xxx', roles=company), 
+
+company = [writer, researcher]
+flow = LineFlow(steps=[
+    RouteTask(description='xxx', roles=company),
+    RouteTask(description='xxx', roles=company),
+    RouteTask(description='xxx', roles=company),
     ...
 ])
 
 # Next Step 2
-auto_flow = ListFlow.auto(goal="Full blog post of at least 4 paragraphs", roles=company)
+auto_flow = LineFlow.auto(goal="Full blog post of at least 4 paragraphs", roles=company)
 auto_flow.run()
 ```
