@@ -9,7 +9,12 @@ def test_lang():
 
 
 def test_limit_callback_var():
+
+    def f():
+        return limit_callback_var.get() is callback
+
     callback = TokenLimitCallback(max_token=10)
     limit_callback_var.set(callback)
     assert limit_callback_var.get() is callback
     assert limit_callback_var.get().should_continue == True
+    assert f()

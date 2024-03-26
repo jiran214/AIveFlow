@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from contextvars import ContextVar
-from typing import Any, Optional
-
-import threading
-import time
+from typing import Any
 from typing import Optional
 
-from pydantic import PrivateAttr, Field, BaseModel
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
@@ -22,6 +18,9 @@ class RPMCallback(BaseCallbackHandler):
     def __init__(self, max_rpm: Optional[int] = None):
         self._controller = RPMController(max_rpm=max_rpm)
         self._controller.reset()
+
+    def on_chat_model_start(self, *args, **kwargs):
+        self._controller.check_or_wait()
 
     def __del__(self):
         self._controller.exit()
