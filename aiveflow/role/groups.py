@@ -3,7 +3,7 @@
 from aiveflow.role.core import Role
 
 
-DEFAULT_ROLE = Role(
+DEFAULT_AI_ROLE = Role(
     name='AI assistant',
     system='You are an AI assistant'
 )
