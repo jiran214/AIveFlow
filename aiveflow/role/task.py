@@ -30,7 +30,7 @@ class Task(BaseModel):
         assert self.chain or self.description, 'Both description and chain are empty!'
         # custom chain
         if self.chain:
-            return
+            return self
 
         # set llm
         self.role.set_chat_model()
@@ -71,6 +71,7 @@ class Task(BaseModel):
             self.chain = agent_executor | itemgetter('output')
         else:
             self.chain = _prompt | self.chain | StrOutputParser()
+        return self
 
     @property
     def node_key(self):

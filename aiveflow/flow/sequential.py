@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import operator
-from typing import List, TypedDict, Annotated, Sequence, Union, Callable, Optional
+from typing import List, TypedDict, Annotated, Sequence
 
-from langchain_core.runnables import chain
 from langgraph.graph import StateGraph, END
 from pydantic import Field, model_validator
 
 from aiveflow import settings
+from aiveflow.components import limit_callback_var
 from aiveflow.flow.base import Flow
 from aiveflow.role.core import Role
 from aiveflow.role.task import Task
@@ -19,11 +19,11 @@ class TaskState(TypedDict):
     # tools_used: List[str]
 
 
-class LineFlowState(TypedDict):
+class SequentialFlowState(TypedDict):
     contexts: Annotated[List[TaskState], operator.add]
 
 
-def get_context(state: LineFlowState, length):
+def get_context(state: SequentialFlowState, length):
     if state['contexts']:
         return "This is the context you're working with:\n" + '\n'.join(
             settings.CONTEXT_PROMPT.format(role=task['role_name'], task_output=task['task_output'])
@@ -32,10 +32,10 @@ def get_context(state: LineFlowState, length):
     return ""
 
 
-class LineFlow(Flow):
+class SequentialFlow(Flow):
     steps: List['Task']
     task_context_length: int = 1
-    graph: StateGraph = Field(default_factory=lambda: StateGraph(LineFlowState))
+    graph: StateGraph = Field(default_factory=lambda: StateGraph(SequentialFlowState))
 
     @classmethod
     def auto(cls, goal: str, roles: Sequence[Role]):
@@ -47,7 +47,7 @@ class LineFlow(Flow):
 
         def execute(state):
             # inject
-            if self._limit_controller and self._limit_controller.should_continue is False:
+            if (callback := limit_callback_var.get()) and callback.should_continue is False:
                 return
             _input = dict(context=get_context(state, self.task_context_length))
             _output = task.chain.invoke(_input)
@@ -81,7 +81,7 @@ if __name__ == '__main__':
         state['contexts'] = [_res]
         return state
 
-    flow = LineFlow(steps=[task, task])
+    flow = SequentialFlow(steps=[task, task])
     res = flow.run(contexts=[TaskState(role_name='test', task_output='0')])
     print(res)
     assert res == '2'

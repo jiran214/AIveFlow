@@ -16,7 +16,7 @@ import os
 from langchain_community.tools.wikipedia.tool import WikipediaQueryRun
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
-from aiveflow.flow.line import LineFlow
+from aiveflow.flow.sequential import SequentialFlow
 from aiveflow.role.core import Role
 from aiveflow.role.task import Task
 
@@ -69,7 +69,7 @@ Expected Full blog post of at least 4 paragraphs""",
 )
 
 # Instantiate your crew with a sequential process
-crew_flow = LineFlow(steps=[task1, task2])
+crew_flow = SequentialFlow(steps=[task1, task2])
 result = crew_flow.run()
 
 print("######################")
@@ -79,7 +79,7 @@ print(result)
 from aiveflow.role.task import RouteTask
 
 company = [writer, researcher]
-flow = LineFlow(steps=[
+flow = SequentialFlow(steps=[
     RouteTask(description='xxx', roles=company),
     RouteTask(description='xxx', roles=company),
     RouteTask(description='xxx', roles=company),
@@ -87,6 +87,6 @@ flow = LineFlow(steps=[
 ])
 
 # Next Step 2
-auto_flow = LineFlow.auto(goal="Full blog post of at least 4 paragraphs", roles=company)
+auto_flow = SequentialFlow.auto(goal="Full blog post of at least 4 paragraphs", roles=company)
 auto_flow.run()
 ```
