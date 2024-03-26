@@ -83,7 +83,7 @@ class Task(BaseModel):
         return f"{self.id}:{self.role.name}:{self.description[:10]}..."
 
 
-class RouteTask(Task):
+class __RouteTask(Task):
     role: Optional[Role] = None
     roles: Sequence[Role]
 
