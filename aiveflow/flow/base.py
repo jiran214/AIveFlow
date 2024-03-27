@@ -3,6 +3,8 @@
 import abc
 from typing import Optional
 
+from langchain_core.runnables import Runnable
+
 from aiveflow.components import run_with_callbacks
 
 from langgraph.graph import StateGraph
@@ -17,7 +19,7 @@ class Flow(Node, abc.ABC):
     max_token: Optional[int] = None
     max_rpm: Optional[int] = Field(None, description="Maximum number of requests per minute for the crew execution to be respected.")
     graph: StateGraph
-    chain: Optional[CompiledGraph] = PrivateAttr(None)
+    chain: Optional[Runnable] = PrivateAttr(None)
 
     @abc.abstractmethod
     def build(self, *args, **kwargs): ...
@@ -27,6 +29,7 @@ class Flow(Node, abc.ABC):
         if not self.chain:
             self.build()
             self.chain = self.graph.compile()
+            self.chain = self.chain.with_config(tags=['flow'])
 
         with run_with_callbacks(max_cost=self.max_cost, max_token=self.max_token, max_rpm=self.max_rpm):
             _output = self.chain.invoke(initial_state or {})

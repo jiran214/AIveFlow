@@ -24,7 +24,6 @@ def get_os_language():
         return
 
 
-
 class RPMController(BaseModel):
     max_rpm: int = Field(description="Maximum number of requests per minute for the crew execution to be respected.")
     _current_rpm: int = PrivateAttr(default=0)

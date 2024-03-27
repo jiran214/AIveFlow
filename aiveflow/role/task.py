@@ -27,6 +27,7 @@ class Task(Node):
         assert self.chain or self.description, 'Both description and chain are empty!'
         # custom chain
         if self.chain:
+            self.chain = self.chain.with_config(tags=['task'])
             return self
 
         # set llm
@@ -72,6 +73,7 @@ class Task(Node):
             self.chain = agent_executor | itemgetter('output')
         else:
             self.chain = _prompt | self.chain | StrOutputParser()
+        self.chain = self.chain.with_config(tags=['task'])
         return self
 
     def run(self, input):
