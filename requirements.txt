@@ -3,3 +3,4 @@ langchain_openai
 pycountry
 langgraph
 python-dotenv
+rich

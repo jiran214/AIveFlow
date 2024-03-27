@@ -49,7 +49,7 @@ class Node(BaseModel):
 
     @property
     def node_key(self):
-        return str(self)
+        return self.id
 
     @abc.abstractmethod
     def run(self, input): ...

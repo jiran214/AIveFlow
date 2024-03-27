@@ -51,8 +51,10 @@ class SequentialFlow(Flow):
                 return
             _input = dict(context=get_context(state, self.task_context_length))
             _output = task.run(_input)
-            role = getattr(task, 'role')
-            role_name = (role and role.name) or task.name
+            if isinstance(task, Task):
+                role_name = task.role.name
+            else:
+                role_name = task.__class__.__name__
             return {'contexts': [TaskState(role_name=role_name, task_output=_output)]}
 
         return execute

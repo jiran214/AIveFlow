@@ -14,6 +14,7 @@ from pydantic import Field, model_validator
 from aiveflow import settings
 from aiveflow.role.core import Role, ToolLike, Node
 from aiveflow.role.groups import DEFAULT_AI_ROLE
+from aiveflow.utils import TaskTracer, get_os_language
 
 
 class Task(Node):
@@ -50,6 +51,10 @@ class Task(Node):
             _tools.append(_tool)
         self.tools = _tools
 
+        # global var
+        if settings.LANGUAGE == 'auto':
+            settings.LANGUAGE = get_os_language() or 'Chinese'
+
         # set prompt
         _prompt = ChatPromptTemplate.from_messages([
             ('system', f"{self.role.system}\nPlease use {settings.LANGUAGE}."),
@@ -70,14 +75,11 @@ class Task(Node):
         return self
 
     def run(self, input):
-        return self.chain.invoke(input)
-
-    @property
-    def name(self):
-        return f'Task result of role {self.role}'
+        output = self.chain.invoke(input)
+        return output
 
     def __str__(self):
-        return f"Task:{self.id}:{self.role.name}:{self.description[:10]}..."
+        return f"Task:{self.description[:10]}..."
 
 
 class __RouteTask(Task):
