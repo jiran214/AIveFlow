@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import threading
+import time
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, List, Dict
+from typing import Any, Union, Dict, Optional, List
 from typing import Optional
 from uuid import UUID
 
@@ -10,9 +12,46 @@ from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 from langchain_core.tracers.context import register_configure_hook
+from pydantic import BaseModel, Field, PrivateAttr
 
-from aiveflow import settings
-from aiveflow.utils import RPMController, EventName, TaskTracer
+from aiveflow.utils import EventName, TaskTracer
+
+
+class RPMController(BaseModel):
+    max_rpm: int = Field(description="Maximum number of requests per minute for the crew execution to be respected.")
+    _current_rpm: int = PrivateAttr(default=0)
+    _timer: Optional[threading.Timer] = PrivateAttr(default=None)
+    _lock: threading.Lock = PrivateAttr(default=None)
+
+    def reset(self):
+        self._lock = threading.Lock()
+        self._reset_request_count()
+
+    def exit(self):
+        if self._timer:
+            self._timer.cancel()
+            self._timer = None
+
+    def check_or_wait(self):
+        with self._lock:
+            if self._current_rpm < self.max_rpm:
+                self._current_rpm += 1
+            else:
+                tracer.log('<Tip>', "Max RPM reached, waiting for next minute to start.")
+                self._wait_for_next_minute()
+                self._current_rpm = 1
+
+    def _wait_for_next_minute(self):
+        time.sleep(60)
+        self._current_rpm = 0
+
+    def _reset_request_count(self):
+        with self._lock:
+            self._current_rpm = 0
+        if self._timer:
+            self._timer.cancel()
+        self._timer = threading.Timer(60.0, self._reset_request_count)
+        self._timer.start()
 
 
 class RPMCallback(BaseCallbackHandler):
@@ -41,11 +80,48 @@ class TokenLimitCallback(OpenAICallbackHandler):
         super().on_llm_end(response, **kwargs)
         self.should_continue = False
         if self.max_cost and self.total_cost > self.max_cost:
-            print(f'exceed cost: {self.total_cost}/{self.max_cost}')
+            tracer.log(EventName.warning, f'exceed cost: {self.total_cost}/{self.max_cost}')
         elif self.max_token and self.total_tokens > self.max_token:
-            print(f'exceed token: {self.total_tokens}/{self.max_token}')
+            tracer.log(EventName.warning, f'exceed token: {self.total_tokens}/{self.max_token}')
         else:
             self.should_continue = True
+
+
+limit_callback_var: ContextVar[Optional[TokenLimitCallback]] = ContextVar(
+    "limit_callback", default=None
+)
+
+rpm_callback_var: ContextVar[Optional[RPMCallback]] = ContextVar(
+    "rpm_callback", default=None
+)
+
+trace_callback_var: ContextVar[Optional['TracerProxy']] = ContextVar(
+    "trace_callback", default=None
+)
+
+register_configure_hook(limit_callback_var, True)
+register_configure_hook(rpm_callback_var, True)
+register_configure_hook(trace_callback_var, True)
+
+
+@contextmanager
+def run_with_callbacks(
+    max_token=None, max_cost=None, max_rpm=None, log=False
+):
+    tracer.log(EventName.flow_start)
+    rpm_callback = max_rpm and RPMCallback(max_rpm=max_rpm)
+    limit_callback = (max_token or max_cost) and TokenLimitCallback(max_token=max_token, max_cost=max_cost)
+    trace_callback = (log and tracer)
+    limit_callback_var.set(limit_callback)
+    rpm_callback_var.set(rpm_callback)
+    trace_callback_var.set(trace_callback)
+    yield
+    # after run
+    if rpm_callback:
+        del rpm_callback
+    limit_callback_var.set(None)
+    rpm_callback_var.set(None)
+    trace_callback_var.set(None)
 
 
 class TracerProxy(BaseCallbackHandler):
@@ -53,7 +129,7 @@ class TracerProxy(BaseCallbackHandler):
     def __init__(self):
         self._tracer = TaskTracer()
 
-    def log(self, event: EventName, desc='', content=None):
+    def log(self, event: Union[EventName, str], desc='', content=None):
         if trace_callback_var.get():
             self._tracer.log(event, desc, content)
 
@@ -92,39 +168,5 @@ class TracerProxy(BaseCallbackHandler):
         self._tracer.log(EventName.task_output, '', response.generations[-1][-1].text)
 
 
-limit_callback_var: ContextVar[Optional[TokenLimitCallback]] = ContextVar(
-    "limit_callback", default=None
-)
-
-rpm_callback_var: ContextVar[Optional[RPMCallback]] = ContextVar(
-    "rpm_callback", default=None
-)
-
-trace_callback_var: ContextVar[Optional['TracerProxy']] = ContextVar(
-    "trace_callback", default=None
-)
-
-register_configure_hook(limit_callback_var, True)
-register_configure_hook(rpm_callback_var, True)
-register_configure_hook(trace_callback_var, True)
 tracer = TracerProxy()
 
-
-@contextmanager
-def run_with_callbacks(
-    max_token=None, max_cost=None, max_rpm=None, log=False
-):
-    tracer.log(EventName.flow_start)
-    rpm_callback = max_rpm and RPMCallback(max_rpm=max_rpm)
-    limit_callback = (max_token or max_cost) and TokenLimitCallback(max_token=max_token, max_cost=max_cost)
-    trace_callback = (log and tracer)
-    limit_callback_var.set(limit_callback)
-    rpm_callback_var.set(rpm_callback)
-    trace_callback_var.set(trace_callback)
-    yield
-    # after run
-    if rpm_callback:
-        del rpm_callback
-    limit_callback_var.set(None)
-    rpm_callback_var.set(None)
-    trace_callback_var.set(None)

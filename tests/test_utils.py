@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from aiveflow import utils, settings
-from aiveflow.callbacks import limit_callback_var, TokenLimitCallback, tracer, trace_callback_var
+from aiveflow.callbacks import limit_callback_var, TokenLimitCallback, trace_callback_var, tracer
 from aiveflow.utils import EventName
 
 
@@ -38,12 +38,13 @@ def test_trace_callback_var(capsys):
 
 
 def test_tracer(capsys):
+    trace_callback_var.set(tracer)
     tracer.log(EventName.flow_start, 'start')
     captured = capsys.readouterr()
     assert EventName.flow_start.value in captured.out
 
     tracer.log(EventName.task_start, 'desc')
-    assert tracer.status
+    assert tracer._tracer.status
 
     tracer.log(EventName.task_output, 'desc', 'output')
     captured = capsys.readouterr()
