@@ -51,3 +51,11 @@ def test_limit(capsys):
     assert '2' in res
     captured = capsys.readouterr()
     assert 'exceed' in captured.out
+
+
+def test_tracer(capsys):
+    flow = sequential.SequentialFlow(steps=[Task(description='1+1=?'), Task(description='3+3=?')], max_token=1)
+    res = flow.run()
+    assert '2' in res
+    captured = capsys.readouterr()
+    assert 'exceed' in captured.out

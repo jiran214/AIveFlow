@@ -7,10 +7,11 @@ from langgraph.graph import StateGraph, END
 from pydantic import Field, model_validator
 
 from aiveflow import settings
-from aiveflow.components import limit_callback_var
+from aiveflow.callbacks import limit_callback_var, tracer
 from aiveflow.flow.base import Flow
 from aiveflow.role.core import Role, Node
 from aiveflow.role.task import Task
+from aiveflow.utils import EventName
 
 
 class TaskState(TypedDict):
@@ -43,18 +44,25 @@ class SequentialFlow(Flow):
         return Flow(steps=steps)
 
     def task_wrapper(self, task: Node):
-        assert task.chain
-
         def execute(state):
             # inject
             if (callback := limit_callback_var.get()) and callback.should_continue is False:
                 return
-            _input = dict(context=get_context(state, self.task_context_length))
-            _output = task.run(_input)
+
             if isinstance(task, Task):
                 role_name = task.role.name
-            else:
+                desc = f"{role_name} Working on {task.description[:10]}..."
+            elif isinstance(task, Flow):
+                if not task.chain:
+                    task.build()
                 role_name = task.__class__.__name__
+                desc = f"{role_name} Working..."
+            else:
+                raise ValueError('task is not instance of Task or Flow')
+            tracer.log(EventName.task_start, desc)
+            assert task.chain
+            _input = dict(context=get_context(state, self.task_context_length))
+            _output = task.chain.invoke(_input)
             return {'contexts': [TaskState(role_name=role_name, task_output=_output)]}
 
         return execute
@@ -70,6 +78,7 @@ class SequentialFlow(Flow):
         self.graph.set_entry_point(node_keys[0])
 
     def run(self, initial_state=None):
+        tracer.log(EventName.flow_start)
         final_state = super().run(initial_state)
         last_context = final_state['contexts'][-1]
         last_output = last_context['task_output']

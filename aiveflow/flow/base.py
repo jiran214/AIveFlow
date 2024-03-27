@@ -5,16 +5,17 @@ from typing import Optional
 
 from langchain_core.runnables import Runnable
 
-from aiveflow.components import run_with_callbacks
+from aiveflow import settings
+from aiveflow.callbacks import run_with_callbacks
 
 from langgraph.graph import StateGraph
-from langgraph.graph.graph import CompiledGraph
 from pydantic import PrivateAttr, Field
 
 from aiveflow.role.core import Node
 
 
 class Flow(Node, abc.ABC):
+    log: bool = True
     max_cost: Optional[int] = None
     max_token: Optional[int] = None
     max_rpm: Optional[int] = Field(None, description="Maximum number of requests per minute for the crew execution to be respected.")
@@ -31,16 +32,12 @@ class Flow(Node, abc.ABC):
             self.chain = self.graph.compile()
             self.chain = self.chain.with_config(tags=['flow'])
 
-        with run_with_callbacks(max_cost=self.max_cost, max_token=self.max_token, max_rpm=self.max_rpm):
+        with run_with_callbacks(max_cost=self.max_cost, max_token=self.max_token, max_rpm=self.max_rpm, log=self.log):
             _output = self.chain.invoke(initial_state or {})
         return _output
 
     def __str__(self):
         return f'flow:{self.id}'
-
-    @property
-    def name(self):
-        return f'Task result of {self.__class__.name}'
 
     class Config:
         arbitrary_types_allowed = True

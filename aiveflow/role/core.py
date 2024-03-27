@@ -5,6 +5,7 @@ import json
 import uuid
 from typing import Optional, Any, Callable, List, TypeVar
 
+from langchain.chains.base import Chain
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
@@ -50,9 +51,6 @@ class Node(BaseModel):
     @property
     def node_key(self):
         return self.id
-
-    @abc.abstractmethod
-    def run(self, input): ...
 
     class Config:
         arbitrary_types_allowed = True

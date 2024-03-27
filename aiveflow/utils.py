@@ -4,14 +4,13 @@ import locale
 import threading
 import time
 import typing
+from enum import Enum
 from typing import Optional
 
 import pycountry
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import PrivateAttr, Field, BaseModel, model_validator
 from rich.console import Console
-from time import sleep
-
 from rich.markdown import Markdown
 
 from aiveflow import settings
@@ -65,6 +64,15 @@ class Stop(Exception):
     pass
 
 
+class EventName(Enum):
+    flow_start = 'Flow Start'
+    task_start = 'Task Start'
+    task_output = 'Task Output'
+    tool_use = 'Tool Use'
+    tool_output = 'Tool Output'
+    # final_output = 'Final Output'
+
+
 class TaskTracer:
     """
     {Role} Working on Task "xxx" ...
@@ -79,14 +87,16 @@ class TaskTracer:
     def __init__(self):
         self.status = None
 
-    def start(self, role_name, task_name=''):
-        """配置初始化"""
-        self.status = self.console.status(f"[bold green]{role_name} Working on {task_name[:10]}...")
-        self.status.__enter__()
+    def log(self, event: EventName, desc='', content=None):
+        if event is EventName.tool_output and self.status:
+            self.status.stop()
+        elif event is EventName.task_start:
+            self.status = self.console.status(desc)
+            self.status.__enter__()
+            return
 
-    def log(self, event, desc='', content=None):
         desc = desc or f": {desc}"
-        self.console.print(f'[bold green]<{event}>{desc}')
+        self.console.print(f'[bold green]<{event.value}>{desc}')
         if content:
             self.print(content)
 
@@ -95,13 +105,3 @@ class TaskTracer:
             self.console.print(Markdown(f'{content}'))
         else:
             self.console.print(f'{content}')
-
-    def end(self, output, last=False):
-        event = 'Task Output'
-        if last:
-            event = 'Final Output'
-        self.log(event, '', output)
-        self.status.stop()
-
-
-tracer = TaskTracer()

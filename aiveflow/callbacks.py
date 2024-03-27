@@ -2,15 +2,17 @@
 # -*- coding: utf-8 -*-
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any
+from typing import Any, List, Dict
 from typing import Optional
+from uuid import UUID
 
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 from langchain_core.tracers.context import register_configure_hook
 
-from aiveflow.utils import RPMController
+from aiveflow import settings
+from aiveflow.utils import RPMController, EventName, TaskTracer
 
 
 class RPMCallback(BaseCallbackHandler):
@@ -46,6 +48,50 @@ class TokenLimitCallback(OpenAICallbackHandler):
             self.should_continue = True
 
 
+class TracerProxy(BaseCallbackHandler):
+
+    def __init__(self):
+        self._tracer = TaskTracer()
+
+    def log(self, event: EventName, desc='', content=None):
+        if trace_callback_var.get():
+            self._tracer.log(event, desc, content)
+
+    def on_tool_start(
+        self,
+        serialized: Dict[str, Any],
+        input_str: str,
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        inputs: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        self._tracer.log(EventName.tool_use, serialized['name'], serialized)
+
+    def on_tool_end(
+        self,
+        output: Any,
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        **kwargs: Any,
+    ) -> Any:
+        self._tracer.log(EventName.tool_output, '', output)
+
+    def on_llm_end(
+        self,
+        response: LLMResult,
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        **kwargs: Any,
+    ) -> Any:
+        self._tracer.log(EventName.task_output, '', response.generations[-1][-1].text)
+
+
 limit_callback_var: ContextVar[Optional[TokenLimitCallback]] = ContextVar(
     "limit_callback", default=None
 )
@@ -54,21 +100,31 @@ rpm_callback_var: ContextVar[Optional[RPMCallback]] = ContextVar(
     "rpm_callback", default=None
 )
 
+trace_callback_var: ContextVar[Optional['TracerProxy']] = ContextVar(
+    "trace_callback", default=None
+)
+
 register_configure_hook(limit_callback_var, True)
 register_configure_hook(rpm_callback_var, True)
+register_configure_hook(trace_callback_var, True)
+tracer = TracerProxy()
 
 
 @contextmanager
 def run_with_callbacks(
-    max_token=None, max_cost=None, max_rpm=None
+    max_token=None, max_cost=None, max_rpm=None, log=False
 ):
+    tracer.log(EventName.flow_start)
     rpm_callback = max_rpm and RPMCallback(max_rpm=max_rpm)
     limit_callback = (max_token or max_cost) and TokenLimitCallback(max_token=max_token, max_cost=max_cost)
+    trace_callback = (log and tracer)
     limit_callback_var.set(limit_callback)
     rpm_callback_var.set(rpm_callback)
+    trace_callback_var.set(trace_callback)
     yield
     # after run
     if rpm_callback:
         del rpm_callback
     limit_callback_var.set(None)
     rpm_callback_var.set(None)
+    trace_callback_var.set(None)

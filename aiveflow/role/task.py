@@ -76,10 +76,6 @@ class Task(Node):
         self.chain = self.chain.with_config(tags=['task'])
         return self
 
-    def run(self, input):
-        output = self.chain.invoke(input)
-        return output
-
     def __str__(self):
         return f"Task:{self.description[:10]}..."
 
