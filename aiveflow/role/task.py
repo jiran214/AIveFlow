@@ -1,29 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import importlib
-import uuid
 from _operator import itemgetter
 from typing import Optional, List, Sequence
 
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import Runnable
 from langchain_core.tools import tool, BaseTool
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, Field, model_validator, UUID4
+from pydantic import Field, model_validator
 
 from aiveflow import settings
-from aiveflow.role.core import Role, ToolLike
+from aiveflow.role.core import Role, ToolLike, Node
 from aiveflow.role.groups import DEFAULT_AI_ROLE
 
 
-class Task(BaseModel):
+class Task(Node):
     role: Role = Field(default_factory=lambda: DEFAULT_AI_ROLE)
     description: Optional[str] = None
     tools: List[ToolLike] = []
-    chain: Optional[Runnable] = None
-    id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
 
     @model_validator(mode='after')
     def __set_chain(self):
@@ -73,15 +69,15 @@ class Task(BaseModel):
             self.chain = _prompt | self.chain | StrOutputParser()
         return self
 
-    @property
-    def node_key(self):
-        return str(self)
+    def run(self, input):
+        return self.chain.invoke(input)
 
-    class Config:
-        arbitrary_types_allowed = True
+    @property
+    def name(self):
+        return f'Task result of role {self.role}'
 
     def __str__(self):
-        return f"{self.id}:{self.role.name}:{self.description[:10]}..."
+        return f"Task:{self.id}:{self.role.name}:{self.description[:10]}..."
 
 
 class __RouteTask(Task):

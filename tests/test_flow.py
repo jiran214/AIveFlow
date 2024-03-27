@@ -4,6 +4,7 @@ import os
 import time
 
 from aiveflow.flow import sequential
+from aiveflow.flow.sequential import TaskState
 from aiveflow.role.task import Task
 
 
@@ -20,6 +21,19 @@ def test_list():
     print(res)
     assert res
     assert '感谢读者阅读' in res
+
+
+def test_init_state():
+    def task(state):
+        _res = state['contexts'][-1]
+        _res['task_output'] = str(int(_res['task_output']) + 1)
+        state['contexts'] = [_res]
+        return state
+
+    flow = sequential.SequentialFlow(steps=[task, task])
+    res = flow.run({'contexts': [TaskState(role_name='test', task_output='0')]})
+    print(res)
+    assert res == '2'
 
 
 def test_rpm(capsys):

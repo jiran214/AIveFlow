@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import abc
 import json
+import uuid
 from typing import Optional, Any, Callable, List, TypeVar
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
-from pydantic import model_validator, BaseModel, Field
+from pydantic import model_validator, BaseModel, Field, UUID4
 
 from aiveflow import settings
 
@@ -40,5 +43,16 @@ class Role(BaseModel):
         arbitrary_types_allowed = True
 
 
+class Node(BaseModel):
+    id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
+    chain: Optional[Runnable] = None
 
+    @property
+    def node_key(self):
+        return str(self)
 
+    @abc.abstractmethod
+    def run(self, input): ...
+
+    class Config:
+        arbitrary_types_allowed = True

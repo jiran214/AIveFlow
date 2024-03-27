@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import operator
-from typing import List, TypedDict, Annotated, Sequence
+from typing import List, TypedDict, Annotated, Sequence, Union
 
 from langgraph.graph import StateGraph, END
 from pydantic import Field, model_validator
@@ -9,7 +9,7 @@ from pydantic import Field, model_validator
 from aiveflow import settings
 from aiveflow.components import limit_callback_var
 from aiveflow.flow.base import Flow
-from aiveflow.role.core import Role
+from aiveflow.role.core import Role, Node
 from aiveflow.role.task import Task
 
 
@@ -33,7 +33,7 @@ def get_context(state: SequentialFlowState, length):
 
 
 class SequentialFlow(Flow):
-    steps: List['Task']
+    steps: List[Union['Task', 'Flow']]
     task_context_length: int = 1
     graph: StateGraph = Field(default_factory=lambda: StateGraph(SequentialFlowState))
 
@@ -42,7 +42,7 @@ class SequentialFlow(Flow):
         steps = []
         return Flow(steps=steps)
 
-    def task_wrapper(self, task: Task):
+    def task_wrapper(self, task: Node):
         assert task.chain
 
         def execute(state):
@@ -50,9 +50,9 @@ class SequentialFlow(Flow):
             if (callback := limit_callback_var.get()) and callback.should_continue is False:
                 return
             _input = dict(context=get_context(state, self.task_context_length))
-            _output = task.chain.invoke(_input)
+            _output = task.run(_input)
             role = getattr(task, 'role')
-            role_name = (role and role.name) or task.chain.name
+            role_name = (role and role.name) or task.name
             return {'contexts': [TaskState(role_name=role_name, task_output=_output)]}
 
         return execute
@@ -67,21 +67,8 @@ class SequentialFlow(Flow):
         self.graph.add_edge(node_keys[-1], END)
         self.graph.set_entry_point(node_keys[0])
 
-    def run(self, **initial_state):
-        final_state = super().run(**initial_state)
+    def run(self, initial_state=None):
+        final_state = super().run(initial_state)
         last_context = final_state['contexts'][-1]
         last_output = last_context['task_output']
         return last_output
-
-
-if __name__ == '__main__':
-    def task(state):
-        _res = state['contexts'][-1]
-        _res['task_output'] = str(int(_res['task_output']) + 1)
-        state['contexts'] = [_res]
-        return state
-
-    flow = SequentialFlow(steps=[task, task])
-    res = flow.run(contexts=[TaskState(role_name='test', task_output='0')])
-    print(res)
-    assert res == '2'
