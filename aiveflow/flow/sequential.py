@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import operator
-from typing import List, TypedDict, Annotated, Sequence, Union
+from typing import List, TypedDict, Annotated
 
 from langgraph.graph import StateGraph, END
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from aiveflow import settings
 from aiveflow.callbacks import limit_callback_var, tracer
 from aiveflow.flow.base import Flow
-from aiveflow.role.core import Role, Node
 from aiveflow.role.task import Task
 from aiveflow.utils import EventName
 
@@ -34,35 +33,22 @@ def get_context(state: SequentialFlowState, length):
 
 
 class SequentialFlow(Flow):
-    steps: List[Union['Task', 'Flow']]
+    steps: List['Task']
     task_context_length: int = 1
     graph: StateGraph = Field(default_factory=lambda: StateGraph(SequentialFlowState))
 
-    @classmethod
-    def auto(cls, goal: str, roles: Sequence[Role]):
-        steps = []
-        return Flow(steps=steps)
-
-    def task_wrapper(self, task: Node):
+    def task_wrapper(self, task: Task):
         def execute(state):
             # inject
             if (callback := limit_callback_var.get()) and callback.should_continue is False:
                 return
-
-            if isinstance(task, Task):
-                role_name = task.role.name
-                desc = f"{role_name} Working on {task.description[:10]}..."
-            elif isinstance(task, Flow):
-                if not task.chain:
-                    task.build()
-                role_name = task.__class__.__name__
-                desc = f"{role_name} Working..."
-            else:
-                raise ValueError('task is not instance of Task or Flow')
+            context = get_context(state, self.task_context_length)
+            role_name = task.role.name
+            desc = f"{role_name} Working on {task.description[:10]}..."
+            _input = f'{context}Your task:\n{task.description}'
             tracer.log(EventName.task_start, desc)
             assert task.chain
-            _input = dict(context=get_context(state, self.task_context_length))
-            _output = task.chain.invoke(_input)
+            _output = task.chain.invoke({'input': _input})
             return {'contexts': [TaskState(role_name=role_name, task_output=_output)]}
 
         return execute

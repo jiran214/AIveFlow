@@ -7,18 +7,21 @@ from typing import Optional, List, Sequence
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnablePassthrough
 from langchain_core.tools import tool, BaseTool
 from langchain_openai import ChatOpenAI
 from pydantic import Field, model_validator
 
 from aiveflow import settings
 from aiveflow.role.core import Role, ToolLike, Node
-from aiveflow.role.groups import DEFAULT_AI_ROLE
-from aiveflow.utils import TaskTracer, get_os_language
+from aiveflow.utils import get_os_language
 
 
 class Task(Node):
-    role: Role = Field(default_factory=lambda: DEFAULT_AI_ROLE)
+    role: Role = Field(default_factory=lambda: Role(
+        name='AI assistant',
+        system='You are an AI assistant'
+    ))
     description: Optional[str] = None
     tools: List[ToolLike] = []
 
@@ -59,7 +62,7 @@ class Task(Node):
         # set prompt
         _prompt = ChatPromptTemplate.from_messages([
             ('system', f"{self.role.system}\nPlease use {settings.LANGUAGE}."),
-            ('human', '{context}Your task:\n' + self.description)
+            ('human', '{input}')
         ])
 
         # construct chain
