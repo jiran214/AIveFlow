@@ -34,7 +34,6 @@ class Task(Node):
             return self
 
         # set llm
-        self.role.set_chat_model()
         self.chain = self.role.chat_model
 
         # override if exists
@@ -62,7 +61,7 @@ class Task(Node):
         # set prompt
         _prompt = ChatPromptTemplate.from_messages([
             ('system', f"{self.role.system}\nPlease use {settings.LANGUAGE}."),
-            ('human', '{input}')
+            ('human', '{knowledge}{task_context}{input}')
         ])
 
         # construct chain
@@ -76,6 +75,7 @@ class Task(Node):
             self.chain = agent_executor | itemgetter('output')
         else:
             self.chain = _prompt | self.chain | StrOutputParser()
+
         self.chain = self.chain.with_config(tags=['task'])
         return self
 

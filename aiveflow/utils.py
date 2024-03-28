@@ -23,6 +23,7 @@ class EventName(Enum):
     tool_use = 'Tool Use'
     tool_output = 'Tool Output'
     warning = 'Warning'
+    knowledge_learn = 'Learning knowledge'
     # final_output = 'Final Output'
 
 

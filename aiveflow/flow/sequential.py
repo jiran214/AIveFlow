@@ -37,13 +37,15 @@ class SequentialFlow(Flow):
     task_context_length: int = 1
     graph: StateGraph = Field(default_factory=lambda: StateGraph(SequentialFlowState))
 
-    def on_task_start(self, state: SequentialFlowState, task: Task) -> str:
+    def on_task_start(self, state: SequentialFlowState, task: Task) -> dict:
         if (callback := limit_callback_var.get()) and callback.should_continue is False:
             raise Stop
-        context = get_context(state, self.task_context_length)
         desc = f"{task.role.name} Working on {task.description[:10]}..."
         tracer.log(EventName.task_start, desc)
-        return f'{context}Your task:\n{task.description}'
+        return {
+            'input': f'\nYour task:\n{task.description}',
+            'task_context': get_context(state, self.task_context_length)
+        }
 
     def on_task_end(self, task_output, task: Task) -> Optional[dict]:
         return {'contexts': [TaskState(role_name=task.role.name, task_output=task_output)]}
