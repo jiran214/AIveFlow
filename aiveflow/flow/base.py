@@ -12,6 +12,7 @@ from langgraph.graph import StateGraph
 from pydantic import PrivateAttr, Field
 
 from aiveflow.role.core import Node
+from aiveflow.role.task import Task
 
 
 class Flow(Node, abc.ABC):
@@ -21,6 +22,36 @@ class Flow(Node, abc.ABC):
     max_rpm: Optional[int] = Field(None, description="Maximum number of requests per minute for the crew execution to be respected.")
     graph: StateGraph
     chain: Optional[Runnable] = PrivateAttr(None)
+
+    def task_wrapper(self, task: Task):
+        def execute(state):
+            _output = task.chain.invoke({'input': self.on_task_start(state, task)})
+            return self.on_task_end(_output, task)
+        return execute
+
+    @abc.abstractmethod
+    def on_task_start(self, state: dict, task: Task) -> str:
+        """
+        task start hook
+        Args:
+            state: Flow State
+            task: Task object
+
+        Returns:
+            task input str
+        """
+
+    @abc.abstractmethod
+    def on_task_end(self, task_output, task: Task) -> Optional[dict]:
+        """
+        task end hook
+        Args:
+            task_output: Task output
+            task: Task object
+
+        Returns:
+            flow node output
+        """
 
     @abc.abstractmethod
     def build(self, *args, **kwargs): ...

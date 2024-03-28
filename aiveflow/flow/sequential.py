@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import operator
-from typing import List, TypedDict, Annotated
+from typing import List, TypedDict, Annotated, Optional
 
 from langgraph.graph import StateGraph, END
 from pydantic import Field
@@ -10,7 +10,7 @@ from aiveflow import settings
 from aiveflow.callbacks import limit_callback_var, tracer
 from aiveflow.flow.base import Flow
 from aiveflow.role.task import Task
-from aiveflow.utils import EventName
+from aiveflow.utils import EventName, Stop
 
 
 class TaskState(TypedDict):
@@ -37,21 +37,16 @@ class SequentialFlow(Flow):
     task_context_length: int = 1
     graph: StateGraph = Field(default_factory=lambda: StateGraph(SequentialFlowState))
 
-    def task_wrapper(self, task: Task):
-        def execute(state):
-            # inject
-            if (callback := limit_callback_var.get()) and callback.should_continue is False:
-                return
-            context = get_context(state, self.task_context_length)
-            role_name = task.role.name
-            desc = f"{role_name} Working on {task.description[:10]}..."
-            _input = f'{context}Your task:\n{task.description}'
-            tracer.log(EventName.task_start, desc)
-            assert task.chain
-            _output = task.chain.invoke({'input': _input})
-            return {'contexts': [TaskState(role_name=role_name, task_output=_output)]}
+    def on_task_start(self, state: SequentialFlowState, task: Task) -> str:
+        if (callback := limit_callback_var.get()) and callback.should_continue is False:
+            raise Stop
+        context = get_context(state, self.task_context_length)
+        desc = f"{task.role.name} Working on {task.description[:10]}..."
+        tracer.log(EventName.task_start, desc)
+        return f'{context}Your task:\n{task.description}'
 
-        return execute
+    def on_task_end(self, task_output, task: Task) -> Optional[dict]:
+        return {'contexts': [TaskState(role_name=task.role.name, task_output=task_output)]}
 
     def build(self):
         node_keys = []
