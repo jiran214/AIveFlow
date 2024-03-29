@@ -61,7 +61,7 @@ class Task(Node):
         # set prompt
         _prompt = ChatPromptTemplate.from_messages([
             ('system', f"{self.role.system}\nPlease use {settings.LANGUAGE}."),
-            ('human', '{knowledge}{task_context}{input}')
+            ('human', '{knowledge}{task_context}Your task:\n{input}')
         ])
 
         # construct chain
@@ -83,6 +83,9 @@ class Task(Node):
             self.chain = RunnablePassthrough.assign(knowledge=itemgetter('input') | self.role.knowledge) | self.chain
         self.chain = self.chain.with_config(tags=['task'])
         return self
+
+    def run(self, task_context=""):
+        return self.chain.invoke({'input': self.description, 'task_context': task_context})
 
     def __str__(self):
         return f"Task:{self.description[:10]}..."

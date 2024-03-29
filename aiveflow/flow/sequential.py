@@ -43,7 +43,7 @@ class SequentialFlow(Flow):
         desc = f"{task.role.name} Working on {task.description[:10]}..."
         tracer.log(EventName.task_start, desc)
         return {
-            'input': f'\nYour task:\n{task.description}',
+            'input': task.description,
             'task_context': get_context(state, self.task_context_length)
         }
 
