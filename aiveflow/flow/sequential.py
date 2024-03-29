@@ -26,7 +26,7 @@ class SequentialFlowState(TypedDict):
 def get_context(state: SequentialFlowState, length):
     if state['contexts']:
         return "This is the context you're working with:\n" + '\n'.join(
-            settings.CONTEXT_PROMPT.format(role=task['role_name'], task_output=task['task_output'])
+            settings.ROLE_CONTEXT_PROMPT.format(role=task['role_name'], task_output=task['task_output'])
             for task in state['contexts'][-length:]
         ) + '\n'
     return ""

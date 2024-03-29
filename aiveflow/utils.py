@@ -8,6 +8,8 @@ import pycountry
 from rich.console import Console
 from rich.markdown import Markdown
 
+from aiveflow import settings
+
 
 def get_os_language():
     try:
@@ -70,7 +72,7 @@ def format_documents(docs):
     if not docs:
         return ''
     knowledge_context = '\n'.join(doc for doc in docs)
-    knowledge_context = f"Answer the question based only on the following context:\n {knowledge_context}\n"
+    knowledge_context = settings.KNOWLEDGE_CONTEXT_PROMPT.foramt(knowledge_context=knowledge_context)
     return knowledge_context
 
 

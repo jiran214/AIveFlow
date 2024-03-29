@@ -8,6 +8,7 @@ from typing import Optional, Any, Callable, List, TypeVar, Union
 from langchain.chains.base import Chain
 from langchain_community.retrievers.embedchain import EmbedchainRetriever
 from langchain_core.language_models import BaseChatModel
+from langchain_core.output_parsers import StrOutputParser, BaseOutputParser
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
@@ -24,10 +25,11 @@ ToolLike = TypeVar('ToolLike', Callable[[str], str], str)
 class Role(BaseModel):
     name: str = Field(description='role name')
     system: str = Field(description='Role play setting')
-    tools: List['ToolLike'] = Field([])
     openai_model_name: Optional[str] = None
+    tools: List['ToolLike'] = Field([])
     chat_model: Optional[BaseChatModel] = None
     knowledge: Optional[Union[BaseRetriever, List[str]]] = None
+    output_parser: BaseOutputParser = Field(default_factory=StrOutputParser)
 
     @classmethod
     def from_json(cls, filepath):

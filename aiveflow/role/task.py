@@ -74,7 +74,9 @@ class Task(Node):
             agent_executor = AgentExecutor(agent=agent, tools=self.tools)
             self.chain = agent_executor | itemgetter('output')
         else:
-            self.chain = _prompt | self.chain | StrOutputParser()
+            self.chain = _prompt | self.chain
+
+        self.chain |= self.role.output_parser
 
         # inject knowledge
         if self.role.knowledge:
