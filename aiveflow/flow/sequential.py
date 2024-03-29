@@ -6,10 +6,9 @@ from typing import List, TypedDict, Annotated, Optional
 from langgraph.graph import StateGraph, END
 from pydantic import Field
 
-from aiveflow import settings
+from aiveflow import settings, Task
 from aiveflow.callbacks import limit_callback_var, tracer
 from aiveflow.flow.base import Flow
-from aiveflow.role.task import Task
 from aiveflow.utils import EventName, Stop
 
 

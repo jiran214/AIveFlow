@@ -3,16 +3,16 @@
 from aiveflow import Role, RolePlay, Task, SequentialFlow
 
 analyst = Role(
+    name='analyse',
     system=RolePlay(
-        role='analyse',
         goal='''You will distill all arguments from all discussion members. Identify who said what. You can reword what they said as long as the main discussion points remain.''',
         backstory='You are an expert discussion analyst.'
     )
 )
 
 scriptwriter = Role(
+    name='scriptwriter',
     system=RolePlay(
-        role='scriptwriter',
         goal='Turn a conversation into a movie script. Only write the dialogue parts. Do not start the sentence with an action. Do not specify situational descriptions. Do not write parentheticals.',
         backstory='''You are an expert on writing natural sounding movie script dialogues. You only focus on the text part and you HATE directional notes.'''
     )
@@ -20,16 +20,16 @@ scriptwriter = Role(
 )
 
 formatter = Role(
+    name='formatter',
     system=RolePlay(
-        role='formatter',
         goal='''Format the text as asked. Leave out actions from discussion members that happen between brackets, eg (smiling).''',
         backstory='You are an expert text formatter.'
     )
 )
 
 scorer = Role(
+    name='scorer',
     system=RolePlay(
-        role='scorer',
         goal='''You score a dialogue assessing various aspects of the exchange between the participants using a 1-10 scale, where 1 is the lowest performance and 10 is the highest:
 Scale:
 1-3: Poor - The dialogue has significant issues that prevent effective communication.
@@ -54,15 +54,13 @@ Emotional Intelligence: Are the participants aware of and sensitive to the emoti
 
 def get_steps(discussion):
     # process post with a crew of agents, ultimately delivering a well formatted dialogue
-    task1 = Task(
+    task1 = analyst.instruct(
         description='Analyse in much detail the following discussion:\n### DISCUSSION:\n' + discussion,
-        role=analyst
     )
-    task2 = Task(
+    task2 = scriptwriter.instruct(
         description='Create a dialogue heavy screenplay from the discussion, between people. Do NOT write parentheticals. Leave out wrylies. You MUST SKIP directional notes.',
-        role=scriptwriter
     )
-    task3 = Task(
+    task3 = formatter.instruct(
         description='''Format the script exactly like this:
     ## (person 1):
     (first text line from person 1)
@@ -75,15 +73,13 @@ def get_steps(discussion):
     
     ## (person 2):
     (second text line from person 2)''',
-        agent=formatter
     )
     return [task1, task2, task3]
 
 
 def get_comment(screenplay):
-    comment = Task(
+    comment = scorer.instruct(
         description='Read the dialogue. Then score the script on a scale of 1 to 10. Only give the score as a number, nothing else. Do not give an explanation.',
-        role=scorer
     ).run(task_context=f"DIALOGUE: {screenplay}\n")
     print(comment)
     return comment

@@ -5,7 +5,7 @@ import time
 
 from aiveflow.flow import sequential
 from aiveflow.flow.sequential import TaskState
-from aiveflow.role.task import Task
+from aiveflow import Task
 
 
 def test_list():

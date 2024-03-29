@@ -76,7 +76,7 @@ def format_documents(docs):
     return knowledge_context
 
 
-def RolePlay(role, backstory, goal):
-    return f"You are {role}.\n{backstory}\n\nYour personal goal is: {goal}"
+def RolePlay(backstory, goal):
+    return f"{backstory}\n\nYour personal goal is: {goal}"
 
 

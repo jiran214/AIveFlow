@@ -18,7 +18,7 @@ from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
 from aiveflow.flow.sequential import SequentialFlow
 from aiveflow.role.core import Role
-from aiveflow.role.task import Task
+from aiveflow import Task
 
 
 def Prompt(role, backstory, goal):

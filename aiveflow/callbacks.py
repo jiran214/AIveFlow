@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 import threading
 import time
+import typing
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, Union, Dict, Optional, List
+from typing import Any, Union, Dict, List
 from typing import Optional
 from uuid import UUID
 
@@ -15,6 +16,9 @@ from langchain_core.tracers.context import register_configure_hook
 from pydantic import BaseModel, Field, PrivateAttr
 
 from aiveflow.utils import EventName, TaskTracer
+
+if typing.TYPE_CHECKING:
+    from aiveflow import Task
 
 
 class RPMController(BaseModel):
@@ -97,6 +101,10 @@ rpm_callback_var: ContextVar[Optional[RPMCallback]] = ContextVar(
 
 trace_callback_var: ContextVar[Optional['TracerProxy']] = ContextVar(
     "trace_callback", default=None
+)
+
+task_context_var: ContextVar[Optional['Task']] = ContextVar(
+    "task_context", default=None
 )
 
 register_configure_hook(limit_callback_var, True)

@@ -3,7 +3,7 @@
 from langchain_openai import ChatOpenAI
 
 from aiveflow.role.core import Role
-from aiveflow.role.task import Task
+from aiveflow import Task
 
 
 def search(query: str):

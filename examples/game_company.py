@@ -5,8 +5,8 @@ from aiveflow import Role, RolePlay, Task, SequentialFlow
 
 class GameCompany:
     senior_engineer = Role(
+        name='Senior Software Engineer',
         system=RolePlay(
-            role='Senior Software Engineer',
             goal='Create software as needed',
             backstory=(
                 "You are a Senior Software Engineer at a leading tech think tank."
@@ -17,8 +17,8 @@ class GameCompany:
     )
 
     qa_engineer = Role(
+        name='Software Quality Control Engineer',
         system=RolePlay(
-            role='Software Quality Control Engineer',
             goal='create prefect code, by analizing the code that is given for errors',
             backstory=(
                 "You are a software engineer that specializes in checking code for errors. "
@@ -31,8 +31,8 @@ class GameCompany:
     )
 
     chief_qa_engineer = Role(
+        name='Chief Software Quality Control Engineer',
         system=RolePlay(
-            role='Chief Software Quality Control Engineer',
             goal='Ensure that the code does the job that it is supposed to do',
             backstory=(
                 "You feel that programmers always do only half the job, so you are"
