@@ -25,13 +25,8 @@ class Flow(Node, abc.ABC):
 
     def task_wrapper(self, task: Task):
         def execute(state):
-            knowledge_context = ""
-            if task.role.knowledge:
-                docs = task.role.knowledge.get_relevant_documents(task.description) or []
-                knowledge_context = '\n'.join(doc for doc in docs)
-                knowledge_context = f"Answer the question based only on the following context:\n {knowledge_context}"
             inputs = self.on_task_start(state, task)
-            _output = task.chain.invoke({**inputs, 'knowledge': knowledge_context})
+            _output = task.chain.invoke(inputs)
             return self.on_task_end(_output, task)
         return execute
 

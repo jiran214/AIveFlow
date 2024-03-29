@@ -66,4 +66,12 @@ class Stop(Exception):
     pass
 
 
+def format_documents(docs):
+    if not docs:
+        return ''
+    knowledge_context = '\n'.join(doc for doc in docs)
+    knowledge_context = f"Answer the question based only on the following context:\n {knowledge_context}\n"
+    return knowledge_context
+
+
 

@@ -76,6 +76,9 @@ class Task(Node):
         else:
             self.chain = _prompt | self.chain | StrOutputParser()
 
+        # inject knowledge
+        if self.role.knowledge:
+            self.chain = RunnablePassthrough.assign(knowledge=itemgetter('input') | self.role.knowledge) | self.chain
         self.chain = self.chain.with_config(tags=['task'])
         return self
 
