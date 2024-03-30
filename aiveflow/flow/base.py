@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import abc
-from typing import Optional
+from typing import Optional, Union
 
 from langchain_core.runnables import Runnable
+from langgraph.graph.graph import CompiledGraph
 
 from aiveflow import settings, Task
 from aiveflow.callbacks import run_with_callbacks
@@ -20,7 +21,7 @@ class Flow(Node, abc.ABC):
     max_token: Optional[int] = None
     max_rpm: Optional[int] = Field(None, description="Maximum number of requests per minute for the crew execution to be respected.")
     graph: StateGraph
-    chain: Optional[Runnable] = None
+    chain: Optional[Union[CompiledGraph, Runnable]] = None
 
     def task_wrapper(self, task: Task):
         def execute(state):
@@ -69,6 +70,9 @@ class Flow(Node, abc.ABC):
 
     def __str__(self):
         return f'flow:{self.id}'
+
+    def print_graph(self):
+        self.chain.get_graph().print_ascii()
 
     class Config:
         arbitrary_types_allowed = True

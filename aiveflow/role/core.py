@@ -8,8 +8,6 @@ from _operator import itemgetter
 from typing import Optional, Any, Callable, List, TypeVar, Union
 
 from langchain.agents import create_openai_tools_agent, AgentExecutor
-from langchain.chains.base import Chain
-from langchain_community.retrievers.embedchain import EmbedchainRetriever
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser, BaseOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -20,8 +18,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import model_validator, BaseModel, Field, UUID4
 
 from aiveflow import settings
-from aiveflow.callbacks import tracer
-from aiveflow.utils import EventName, get_os_language
+from aiveflow.utils import get_os_language
 
 # https://python.langchain.com/docs/modules/agents/tools/custom_tools#subclass-basetool
 ToolLike = TypeVar('ToolLike', Callable[[str], str], str)
@@ -44,21 +41,21 @@ class Role(BaseModel):
             assert isinstance(data, dict), 'json should be a object which include name, system key'
         return cls(**data)
 
-    @model_validator(mode='after')
-    def __set_embedchain(self):
-        if not self.knowledge:
-            return self
-        if isinstance(self.knowledge, list):
-            try:
-                from aiveflow.knowledge import KnowledgeBase
-            except ImportError:
-                raise ImportError('Please run `pip install embedchain`')
-            _base = KnowledgeBase.get(self.name)
-            for source in self.knowledge:
-                tracer.log(EventName.knowledge_learn, source)
-                _base.add(source)
-            self.knowledge = EmbedchainRetriever(clinet=_base)
-        return self
+    # @model_validator(mode='after')
+    # def __set_embedchain(self):
+    #     if not self.knowledge:
+    #         return self
+    #     if isinstance(self.knowledge, list):
+    #         try:
+    #             from aiveflow.knowledge import KnowledgeBase
+    #         except ImportError:
+    #             raise ImportError('Please run `pip install embedchain`')
+    #         _base = KnowledgeBase.get(self.name)
+    #         for source in self.knowledge:
+    #             tracer.log(EventName.knowledge_learn, source)
+    #             _base.add(source)
+    #         self.knowledge = EmbedchainRetriever(clinet=_base)
+    #     return self
 
     @property
     def slug(self):
